@@ -1,0 +1,120 @@
+﻿@page "/computer"
+@attribute [Authorize(Roles = "Admin")]
+
+@using Syncfusion.Blazor.Grids
+@using Syncfusion.Blazor.Inputs
+
+@inject IComputerServices computerService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+ <div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div>
+
+                <h1 class="oi oi-briefcase">&nbsp &nbsp Computers</h1>
+            </div>
+            <div class="card-body">
+                <SfGrid DataSource="@computerModels" AllowPaging="true" AllowTextWrap="true" AllowPdfExport="true" Toolbar="@(new List<string>() {"Add","Edit","Update","Delete","Cancel","Search"})" AllowSelection="true" @ref="Grid">
+                    <GridEvents OnBeginEdit="BeginEditHandler" OnActionBegin="ActionBeginHandler" TValue="ComputerModel"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+                    <GridColumns>
+                        <GridColumn Field=@nameof(ComputerModel.Id) IsPrimaryKey="true" HeaderText="Id" Width="50"></GridColumn>
+                        <GridColumn HeaderText="Image" Width="120">
+                            <Template>
+                                @{
+                                    var computer = (context as ComputerModel);
+                                    <div class="image">
+                                        <img src="@computer.GeneralImage" alt="@computer.GeneralImage" width="100" height="100" />
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.ComputerName) HeaderText="Name" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.Serial) HeaderText="Serial" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.Video) HeaderText="Video" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.Network) HeaderText="Network" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.Memory) HeaderText="Memory" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.Player) HeaderText="Player" Width="120" MaxWidth="120px"></GridColumn>
+
+                        <GridColumn Field=@nameof(ComputerModel.HardDrive) HeaderText="HardDrive" Width="120" MaxWidth="120px"></GridColumn>
+                        <GridColumn Field=@nameof(ComputerModel.Computers) HeaderText="Status" Width="120"></GridColumn>
+
+
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+ 
+<style>
+    .e-grid .e-headercelldiv {
+        font-size: 20px;
+        text-align: left;
+    }
+
+    h1 {
+        margin-left: 550px
+    }
+
+    .e-textbox {
+        vertical-align: top;
+    }
+
+
+    .e-grid .e-rowcell {
+        font-size: 20px;
+    }
+
+    .text {
+        height: 100px;
+    }
+
+    div#Grid_dialogEdit_wrapper {
+        max-height: none !important;
+    }
+
+    .multiline {
+        width: 60%;
+        height: 135px;
+        margin-top: -25px;
+    }
+
+    /* To specify height and font size */
+    .e-input:not(:valid), .e-input:valid, .e-float-input.e-control-wrapper input:not(:valid), .e-float-input.e-control-wrapper input:valid, .e-float-input input:not(:valid), .e-float-input input:valid, .e-input-group input:not(:valid), .e-input-group input:valid, .e-input-group.e-control-wrapper input:not(:valid), .e-input-group.e-control-wrapper input:valid, .e-float-input.e-control-wrapper textarea:not(:valid), .e-float-input.e-control-wrapper textarea:valid, .e-float-input textarea:not(:valid), .e-float-input textarea:valid, .e-input-group.e-control-wrapper textarea:not(:valid), .e-input-group.e-control-wrapper textarea:valid, .e-input-group textarea:not(:valid), .e-input-group textarea:valid {
+        font-size: 20px;
+        height: 30px;
+    }
+</style>
+
+
+@code {
+    SfGrid<ComputerModel> Grid;
+    List<ComputerModel> computerModels = new();
+    protected override async Task OnInitializedAsync()
+    {
+        computerModels = await computerService.GetComputerAsync();
+    }
+
+    //When toolbar item is clicked
+    public async Task ActionBeginHandler(ActionEventArgs<ComputerModel> Args)
+    {
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+            navigationManager.NavigateTo("/computers");
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            bool confirm = await js.InvokeAsync<bool>("window.confirm", "Are you sure you want to really delete?");
+            if (confirm)
+            {
+                await computerService.DeleteComputerAsync(Args.RowData.Id);
+                computerModels = (await computerService.GetComputerAsync()).ToList();
+                await Grid.Refresh();
+            }
+        }
+    }
+
+    public void BeginEditHandler(BeginEditArgs<ComputerModel> args) => navigationManager.NavigateTo($"computers/{args.RowData.Id}");
+}

@@ -1,0 +1,119 @@
+﻿@page "/hard"
+@attribute [Authorize(Roles = "Admin")]
+
+
+
+
+@inject IHarddriveService harddriveService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div>
+
+                <h1 class="oi oi-briefcase">&nbsp &nbsp Hard Drives</h1>
+            </div>
+            <div class="card-body">
+                <SfGrid DataSource="@harddriveModels" AllowPaging="true" AllowTextWrap="true" Toolbar="@(new List<string>() {"Add","Edit","Delete","Search"})" AllowSelection="true" @ref="Grid">
+                    <GridEvents  OnBeginEdit="BeginEditHandler" OnActionBegin="ActionBeginHandler" TValue="HarddriveModel"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+                     <GridColumns>
+                        <GridColumn Field=@nameof(HarddriveModel.Id) IsPrimaryKey="true" HeaderText="Id" Width="50"></GridColumn>
+                        <GridColumn HeaderText="Image" Width="120">
+                            <Template>
+                                @{
+                                    var harddrive = (context as HarddriveModel);
+                                    <div class="image">
+                                        <img src="@harddrive.GeneralImage" alt="@harddrive.GeneralImage" width="100" height="100" />
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                        <GridColumn Field=@nameof(HarddriveModel.ComputerName) HeaderText="Name" TextAlign="TextAlign.Center" Width="120"></GridColumn>
+                        <GridColumn Field=@nameof(HarddriveModel.Model) HeaderText="Model" Width="120"></GridColumn>
+                        
+                        <GridColumn Field=@nameof(HarddriveModel.Serial) HeaderText="Serial" Width="120"></GridColumn>
+                        
+                        <GridColumn Field=@nameof(HarddriveModel.Status) HeaderText="Status" Width="120"></GridColumn>
+                    </GridColumns>
+               </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+    .e-grid .e-headercelldiv {
+        font-size: 20px;
+        text-align: left;
+    }
+
+    h1 {
+        margin-left: 550px
+    }
+
+    .e-textbox {
+        vertical-align: top;
+    }
+
+
+    .e-grid .e-rowcell {
+        font-size: 20px;
+    }
+
+    .text {
+        height: 100px;
+    }
+
+    div#Grid_dialogEdit_wrapper {
+        max-height: none !important;
+    }
+
+    .multiline {
+        width: 60%;
+        height: 135px;
+        margin-top: -25px;
+    }
+
+    /* To specify height and font size */
+    .e-input:not(:valid), .e-input:valid, .e-float-input.e-control-wrapper input:not(:valid), .e-float-input.e-control-wrapper input:valid, .e-float-input input:not(:valid), .e-float-input input:valid, .e-input-group input:not(:valid), .e-input-group input:valid, .e-input-group.e-control-wrapper input:not(:valid), .e-input-group.e-control-wrapper input:valid, .e-float-input.e-control-wrapper textarea:not(:valid), .e-float-input.e-control-wrapper textarea:valid, .e-float-input textarea:not(:valid), .e-float-input textarea:valid, .e-input-group.e-control-wrapper textarea:not(:valid), .e-input-group.e-control-wrapper textarea:valid, .e-input-group textarea:not(:valid), .e-input-group textarea:valid {
+        font-size: 20px;
+        height: 30px;
+    }
+</style>
+
+
+@code {
+    SfGrid<HarddriveModel> Grid;
+    List<HarddriveModel> harddriveModels = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        harddriveModels = await harddriveService.GetHarddriveAsync();
+    }
+
+    //When toolbar item is clicked
+    public async Task ActionBeginHandler(ActionEventArgs<HarddriveModel> Args)
+    {
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+            navigationManager.NavigateTo("/hards");
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            bool confirm = await js.InvokeAsync<bool>("window.confirm", "Are you sure you want to really delete?");
+            if (confirm)
+            {
+                await harddriveService.DeleteHarddriveAsync(Args.RowData.Id);
+                harddriveModels = (await harddriveService.GetHarddriveAsync()).ToList();
+                await Grid.Refresh();
+            }
+        }
+    }    
+    
+
+    public void BeginEditHandler(BeginEditArgs<HarddriveModel> args) => navigationManager.NavigateTo($"inventories/{args.RowData.Id}");
+}

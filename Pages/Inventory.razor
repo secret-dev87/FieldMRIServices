@@ -1,0 +1,123 @@
+﻿@page "/inventory"
+@attribute [Authorize(Roles = "Admin")]
+
+
+@inject IIventoryServices inventoryService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+<div class="row">
+    <div class="col-md-12">
+        <div class="card">
+            <div>
+                <h1 class="oi oi-briefcase">&nbsp &nbsp Inventory</h1>
+            </div>
+            <div class="card-body">
+                <SfGrid DataSource="@inventoryModels" AllowPaging="true" AllowTextWrap="true"  Toolbar="@(new List<string>() {"Add","Edit","Delete","Search"})" AllowSelection="true" @ref="Grid">
+                    <GridEvents OnBeginEdit="BeginEditHandler" OnActionBegin="ActionBeginHandler" TValue="InventoryModel"></GridEvents>
+                    <GridEditSettings AllowAdding="true" AllowEditing="true" AllowDeleting="true" Mode="EditMode.Dialog"></GridEditSettings>
+                    <GridColumns>
+                        <GridColumn Field=@nameof(InventoryModel.Id) IsPrimaryKey="true" HeaderText="Id" Width="50"></GridColumn>
+                        <GridColumn HeaderText="Image" Width="60">
+                            <Template>
+                                @{
+                                    var inventory = (context as InventoryModel);
+                                    <div class="image">
+                                        <img src="@inventory.GeneralImage" alt="@inventory.GeneralImage" width="50" height="50" />
+                                    </div>
+                                }
+                            </Template>
+                        </GridColumn>
+                        
+                            <GridColumn Field=@nameof(InventoryModel.InventoryName) HeaderText="Name" TextAlign="TextAlign.Center" Width="300"></GridColumn>
+                       
+                        
+                        <GridColumn Field=@nameof(InventoryModel.Description) HeaderText="Description" Width="200" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(InventoryModel.Pin) HeaderText="PN/Model" TextAlign="TextAlign.Center" Width="200">
+                        </GridColumn>
+                        <GridColumn Field=@nameof(InventoryModel.Serial) HeaderText="SN" Width="200" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(InventoryModel.Tag) HeaderText="Tag" Width="120" TextAlign="TextAlign.Center"></GridColumn>
+                        <GridColumn Field=@nameof(InventoryModel.Location) HeaderText="Location" Width="120" MaxWidth="120px"></GridColumn>
+
+                        <GridColumn Field=@nameof(InventoryModel.Barcode) HeaderText="Barcode" Width="120" MaxWidth="120px" TextAlign="TextAlign.Center"></GridColumn>
+                        <div class="status">
+                            <GridColumn Field=@nameof(InventoryModel.Status) HeaderText="Status" Width="1000" TextAlign="TextAlign.Center"></GridColumn>
+                        </div>
+                       
+                    </GridColumns>
+                </SfGrid>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+
+    h1 {
+        margin-left: 550px
+    }
+
+    .e-textbox {
+        vertical-align: top;
+    }
+
+
+    .e-grid .e-rowcell {
+        font-size: 1rem;
+        font-weight:bold;
+    }
+
+    .text {
+        font-weight:bold;
+        height: 100px;
+    }
+
+    div#Grid_dialogEdit_wrapper {
+        max-height: none !important;
+    }
+
+    .multiline {
+        width: 60%;
+        height: 135px;
+        margin-top: -25px;
+        font-size:1rem;
+    }
+
+    /* To specify height and font size */
+    .e-input:not(:valid), .e-input:valid, .e-float-input.e-control-wrapper input:not(:valid), .e-float-input.e-control-wrapper input:valid, .e-float-input input:not(:valid), .e-float-input input:valid, .e-input-group input:not(:valid), .e-input-group input:valid, .e-input-group.e-control-wrapper input:not(:valid), .e-input-group.e-control-wrapper input:valid, .e-float-input.e-control-wrapper textarea:not(:valid), .e-float-input.e-control-wrapper textarea:valid, .e-float-input textarea:not(:valid), .e-float-input textarea:valid, .e-input-group.e-control-wrapper textarea:not(:valid), .e-input-group.e-control-wrapper textarea:valid, .e-input-group textarea:not(:valid), .e-input-group textarea:valid {
+        font-size: 20px;
+        height: 30px;
+    }
+</style>
+
+
+@code {
+    SfGrid<InventoryModel> Grid;
+    List<InventoryModel> inventoryModels = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        inventoryModels = await inventoryService.GetInventoryAsync();
+    }
+
+    //When toolbar item is clicked
+    public async Task ActionBeginHandler(ActionEventArgs<InventoryModel> Args)
+    {
+        
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Add))
+            navigationManager.NavigateTo("/inventories");
+
+        if (Args.RequestType.Equals(Syncfusion.Blazor.Grids.Action.Delete))
+        {
+            bool confirm = await js.InvokeAsync<bool>("window.confirm", "Are you sure you want to really delete?");
+            if (confirm)
+            {
+                await inventoryService.DeleteInventoryAsync(Args.RowData.Id);
+                inventoryModels = (await inventoryService.GetInventoryAsync()).ToList();
+                await Grid.Refresh();
+            }
+        }
+    }
+
+    public void BeginEditHandler(BeginEditArgs<InventoryModel> args) => navigationManager.NavigateTo($"inventories/{args.RowData.Id}");
+}

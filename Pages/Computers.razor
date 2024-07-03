@@ -1,0 +1,234 @@
+﻿@page "/computers"
+@page "/computers/{Id:int}"
+@attribute [Authorize(Roles = "Admin")]
+
+
+@inject IComputerServices computerService
+@inject NavigationManager navigationManager
+@inject IJSRuntime js
+
+
+
+<SfDialog @ref="@DialogRef" Width="800px" ShowCloseIcon="false" AllowPrerender="true" IsModal="true" style="border:3px solid #0d6efd">
+    <DialogEvents OnOpen="onOpen"></DialogEvents>
+    <DialogTemplates>
+        <Content>
+            <MessageComponent Message="@Message" Visibility="@Visibility" NavigateTo="@NavigateTo"></MessageComponent>
+            <EditForm Model="computerModel" OnValidSubmit="SaveRecipe">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="card-header fw-bold h5 text-light bg-primary"><i class="oi oi-briefcase"></i> @Title</div>
+
+                        <div>
+                            <label style="margin-top:9px;">Computer Name</label>
+                            <label style="margin-left:220px;margin-top:9px;">Video</label>
+
+                            <div style="margin-top:-10px; width:300px;">
+                                <div>
+                                    <SfTextBox ID="InventoryName" @bind-Value="@(computerModel.ComputerName)" FloatLabelType="FloatLabelType.Always"></SfTextBox>
+                                </div>
+                            </div>
+                            <div style="margin-top:-57px; margin-left:313px; width:300px;">
+                                <SfTextBox ID="Description" @bind-Value="@(computerModel.Video)" FloatLabelType="FloatLabelType.Always"></SfTextBox>
+                            </div>
+
+                            <label style="margin-top:15px;">Network</label>
+                            <label style="margin-top:15px;Margin-left:270px;">Memory</label>
+                            <div>
+                                <div style="margin-top:-25px; width:300px;">
+                                    <SfTextBox ID="Location" @bind-Value="@(computerModel.Network)" FloatLabelType="FloatLabelType.Always"></SfTextBox>
+                                </div>
+                                <div style="margin-top:-55px;Margin-left:320px; width:300px;">
+                                    <SfTextBox ID="Location" @bind-Value="@(computerModel.Memory)" FloatLabelType="FloatLabelType.Always"></SfTextBox>
+                                </div>
+                            </div>
+
+
+
+                            <label style="margin-top:20px;">Player</label>
+                            <label style="margin-top:20px;Margin-left:300px;">Hard Drive</label>
+                            <div>
+                                <div style="margin-top: -15px; width: 300px;">
+                                    <SfTextBox ID="Serial" @bind-Value="@(computerModel.Player)" FloatLabelType="FloatLabelType.Always" Placeholder=""></SfTextBox>
+                                </div>
+                            </div>
+                            <div style="margin-top:-55px;margin-left:313px; width:300px;">
+                                <div>
+                                    <SfTextBox ID="Pin" @bind-Value="@(computerModel.HardDrive)" FloatLabelType="FloatLabelType.Always" Placeholder=""></SfTextBox>
+                                </div>
+                            </div>
+                          
+@*                             <label>Status</label>
+ *@                            <div>
+                                <div class="multiline" style="margin-top:9px;;">
+                                    <SfTextBox Multiline=true ID="Status" @bind-Value="@(computerModel.Computers)" FloatLabelType="FloatLabelType.Always" Placeholder=""></SfTextBox>
+                                </div>
+                            </div>
+                        </div>
+
+                        <br <br <br />
+                        <div>
+                            <img src="@computerModel.GeneralImage" asp-append-version="true" height="400px" width="400px" />
+                        </div>
+                        <div class="form-control mt-2">
+                            <SfUploader AutoUpload="true" AllowMultiple=true AllowedExtensions=".png, .PNG, .JPEG, .jpeg, .JPG, .jpg" MinFileSize=10000 MaxFileSize=10000000000>
+                                <UploaderEvents ValueChange="OnChange"></UploaderEvents>
+                            </SfUploader>
+                        </div>
+                        <div>
+                            <table>
+                                <tr>
+                                    <td>
+                                        @if (Id > 0)
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"> <i class="oi oi-loop-circular"></i> Update Procedure</button>
+                                        }
+                                        else
+                                        {
+                                            <button type="submit" class="btn btn-primary  m-3"><i class="oi oi-plus"></i> Add Procedure</button>
+                                        }
+                                    </td>
+                                    <td><button type="button" class="btn btn-warning  m-3" @onclick="Cancel"><i class="oi oi-circle-x"></i> Cancel</button></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </EditForm>
+        </Content>
+    </DialogTemplates>
+</SfDialog>
+
+@code
+{
+    [Parameter] public int Id { get; set; }
+
+    public bool Visibility { get; set; }
+    public string Message { get; set; } = string.Empty;
+    public string NavigateTo { get; set; } = string.Empty;
+
+    public ComputerModel computerModel = new();
+    public List<ComputerPhotoModel> photos = new();
+    public ComputerPhotoModel computerPhotoModel = new();
+
+    public string Title { get; set; } = string.Empty;
+
+
+    SfDialog DialogRef;
+    private async Task OpenDialog()
+    {
+        await this.DialogRef.ShowAsync();
+    }
+    private async Task CloseDialog()
+    {
+        await this.DialogRef.HideAsync();
+    }
+    private void onOpen(BeforeOpenEventArgs args)
+    {
+        // setting maximum height to the Dialog
+        args.MaxHeight = "700px";
+    }
+
+
+    protected async override Task OnInitializedAsync()
+    {
+        photos = await computerService.GetPhotosAsync();
+        Title = "Add Computers";
+    }
+    private async Task SaveRecipe()
+    {
+        var result = await computerService.AddOrUpdateComputerAsync(computerModel);
+        switch (result)
+        {
+            case 200:
+                Message = "Successfully Updated";
+                Visibility = true;
+                NavigateTo = "/computer";
+                break;
+
+            case 201:
+                Message = "Successfully Created";
+                Visibility = true;
+                NavigateTo = "/computer";
+                break;
+
+            case 400:
+                Message = "All fields required";
+                Visibility = true;
+                break;
+
+            case 404:
+                Message = "Recipe not found";
+                NavigateTo = "/computer";
+                Visibility = true;
+                break;
+
+            case 406:
+                Message = "Recipe already added";
+                NavigateTo = "/computer";
+                Visibility = true;
+                break;
+        }
+    }
+
+    private async void OnChange(UploadChangeEventArgs args)
+    {
+        try
+        {
+            foreach (var file in args.Files)
+            {
+                string format = string.Empty;
+                if (file.FileInfo.Name.ToLower().Contains("png"))
+                    format = "image/png";
+
+                if (file.FileInfo.Name.ToLower().Contains("jpg"))
+                    format = "image/jpg";
+
+                if (file.FileInfo.Name.ToLower().Contains("jpeg"))
+                    format = "image/jpeg";
+
+                var selectedFile = file.File;
+
+                await using MemoryStream fs = new MemoryStream();
+                await file.File.OpenReadStream(256000000).CopyToAsync(fs);
+                byte[] somBytes = GetBytes(fs);
+                string imageData = $"data:{format};base64,{Convert.ToBase64String(somBytes, 0, somBytes.Length)}";
+                computerModel.GeneralImage = imageData;
+                
+            }
+        }
+        catch (Exception ex)
+        {
+            await js.InvokeVoidAsync("alert", ex.Message);
+        }
+    }
+
+
+    public static byte[] GetBytes(Stream stream)
+    {
+        var bytes = new byte[stream.Length];
+        stream.Seek(0, SeekOrigin.Begin);
+        stream.ReadAsync(bytes, 0, bytes.Length);
+        stream.Dispose();
+        return bytes;
+    }
+
+
+    public void Cancel()
+    {
+        navigationManager.NavigateTo("/computer");
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Id > 0)
+        {
+            computerModel = await computerService.GetComputerByIdAsync(Id);
+            Title = "Update Computer";
+            return;
+        }
+        Title = "Add Computer";
+    }
+
+
+}
